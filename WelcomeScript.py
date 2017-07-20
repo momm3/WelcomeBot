@@ -12,56 +12,50 @@ EXAMPLE_COMMAND = "do"
 BOOT_COMMAND = "!boot"
 SYSTEM_HELP = "!help"
 
-# instantiate Slack & Twilio clients
+# instantiate Slack client
 slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
-currentUsers = 33
-numUsers = 33
-tolnumUsers = slack_client.api_call("users.list", presence=False)
-nameList = []
-usersData = tolnumUsers["members"]
-for member in usersData:
-    name = member.get("name")
-    nameList.append(name)
-numUsers = len(nameList)
-print (nameList)
-print (numUsers)
-#print ("Current Users Are " + nameList + " for a total of " + numUsers + "users.")
 
+#Number of Users function
+def getNumUsers():
+    tolnumUsers = slack_client.api_call("channels.info", channel="C3ZTYM160")
+    nameList = []
+    usersDataa = (tolnumUsers["channel"])
+    usersData = usersDataa["members"]
+    for member in usersData:
+        nameList.append(member)
+    numUserss = len(nameList)
+    return numUserss
 
+#Command Handler
 def handle_command(command, channel):
-    """
-        Receives commands directed at the bot and determines if they
-        are valid commands. If so, then acts on the commands. If not,
-        returns back what it needs for clarification.
-    """
+    currentUsers = getNumUsers()
+    READ_WEBSOCKET_DELAYS = 10
+    #WAIT 10 SECONDS BEFORE LOOPING AGAIN
     if command.startswith(EXAMPLE_COMMAND):
         response = "Sure...write some more code then I can do that!"
         slack_client.api_call("chat.postMessage", channel=channel,
                           text=response, as_user=True)
     if command.startswith(BOOT_COMMAND):
-        response = "Booting up Welcome Bot V.5"
+        response = "Booted up Welcome Bot V1.0"
         slack_client.api_call("chat.postMessage", channel=channel,
                           text=response, as_user=True)
     if command.startswith(SYSTEM_HELP):
-        response = "I can only do one thing! Please type in @welcome_bot !users to initalize me. As long as I am online, I will welcome new users to slack!"
+        response = "I can only do one thing! Please type in @welcome_bot !boot to initalize me. As long as I am online, I will welcome new users to slack!"
         slack_client.api_call("chat.postMessage", channel=channel,
                           text=response, as_user=True)
     while 1>0:
-        if numUsers > currentUsers:
-            response = "Welcome New User to Butler Dawgs. Type /join to join a channel! Chatting in general is disabled."
+        if getNumUsers() > currentUsers:
+            response = "Welcome to Butler Dawgs. Type /join to join a channel!"
             slack_client.api_call("chat.postMessage", channel=channel,
                           text=response, as_user=True)
-            break
+            currentUsers += 1
+        time.sleep(READ_WEBSOCKET_DELAYS)
+    #FALSE
     response = "Not sure what you mean. Use the *" + EXAMPLE_COMMAND + \
                    "* command with numbers, delimited by spaces."
 
 
 def parse_slack_output(slack_rtm_output):
-    """
-        The Slack Real Time Messaging API is an events firehose.
-        this parsing function returns None unless a message is
-        directed at the Bot, based on its ID.
-    """
     output_list = slack_rtm_output
     if output_list and len(output_list) > 0:
         for output in output_list:
@@ -71,7 +65,7 @@ def parse_slack_output(slack_rtm_output):
                        output['channel']
     return None, None
 
-
+#Determines if the running actually worked or not.
 if __name__ == "__main__":
     READ_WEBSOCKET_DELAY = 1 # 1 second delay between reading from firehose
     if slack_client.rtm_connect():
